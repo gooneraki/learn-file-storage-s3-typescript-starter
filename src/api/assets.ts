@@ -7,3 +7,7 @@ export function ensureAssetsDir(cfg: ApiConfig) {
     mkdirSync(cfg.assetsRoot, { recursive: true });
   }
 }
+
+export function createDataUrl(mediaType: string, data: string) {
+  return `data:${mediaType};base64,${data}`;
+}
