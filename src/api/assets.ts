@@ -31,10 +31,6 @@ export function thumbnailLocalPath(fileName: string) {
   return path.join(cfg.assetsRoot, fileName);
 }
 
-export function thumbnailServePath(
-  cfg: ApiConfig,
-  videoID: string,
-  fileExtension: string
-) {
-  return `http://localhost:${cfg.port}/assets/${videoID}.${fileExtension}`;
+export function thumbnailServePath(cfg: ApiConfig, fileName: string) {
+  return `http://localhost:${cfg.port}/assets/${fileName}`;
 }
