@@ -83,7 +83,7 @@ export async function handlerUploadThumbnail(cfg: ApiConfig, req: BunRequest) {
     throw new Error("Error reading file data");
   }
 
-  const fileDataStr = Buffer.from(fileData).toString("base64");
+  // const fileDataStr = Buffer.from(fileData).toString("base64");
   // const dataUrl = createDataUrl(mediaType, fileDataStr);
   const fileName = `${videoId}.${fileExtension(mediaType)}`;
   const fileLocalPath = thumbnailLocalPath(fileName);

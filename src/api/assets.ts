@@ -18,8 +18,10 @@ export function fileExtension(mediaType: string) {
   switch (mediaType) {
     case "image/png":
       return "png";
-    case "video/mp4":
-      return "mp4";
+    case "image/jpeg":
+      return "jpeg";
+    // case "video/mp4":
+    //   return "mp4";
     default:
       throw new BadRequestError(`mediatype '${mediaType}' not handled`);
   }
