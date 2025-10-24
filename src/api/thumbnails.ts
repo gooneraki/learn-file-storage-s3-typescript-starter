@@ -1,9 +1,9 @@
 import { getBearerToken, validateJWT } from "../auth";
 import { respondWithJSON } from "./json";
-import { getVideo } from "../db/videos";
+import { getVideo, updateVideo } from "../db/videos";
 import type { ApiConfig } from "../config";
 import type { BunRequest } from "bun";
-import { BadRequestError, NotFoundError } from "./errors";
+import { BadRequestError, NotFoundError, UserForbiddenError } from "./errors";
 
 type Thumbnail = {
   data: ArrayBuffer;
@@ -48,6 +48,43 @@ export async function handlerUploadThumbnail(cfg: ApiConfig, req: BunRequest) {
   console.log("uploading thumbnail for video", videoId, "by user", userID);
 
   // TODO: implement the upload here
+  const formData = await req.formData();
+  const thumbnailFile = formData.get("thumbnail");
+  if (!thumbnailFile) {
+    throw new BadRequestError("no 'thumbnail' found in form data");
+  }
+  if (!(thumbnailFile instanceof File)) {
+    throw new BadRequestError("'thumbnail' value is not instance of file");
+  }
 
-  return respondWithJSON(200, null);
+  const MAX_UPLOAD_SIZE = 10 << 20;
+  const mediaType = thumbnailFile.type;
+
+  const imageData = await thumbnailFile.arrayBuffer();
+
+  const metaData = getVideo(cfg.db, videoId);
+  if (!metaData) {
+    throw new BadRequestError(`video '${videoId}' does not exist in database`);
+  }
+  if (metaData.userID !== userID) {
+    throw new UserForbiddenError("user not authorized to edit this video");
+  }
+
+  videoThumbnails.set(videoId, {
+    data: imageData,
+    mediaType,
+  });
+
+  const thumbnailURL = `http://localhost:${cfg.port}/api/thumbnails/:${videoId}`;
+
+  await updateVideo(cfg.db, {
+    ...metaData,
+    thumbnailURL,
+  });
+
+  return respondWithJSON(200, {
+    ...metaData,
+    thumbnailURL,
+    updatedAt: new Date(),
+  });
 }
