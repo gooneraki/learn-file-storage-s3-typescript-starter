@@ -7,6 +7,7 @@ import { BadRequestError, NotFoundError, UserForbiddenError } from "./errors";
 import { getBearerToken, validateJWT } from "../auth";
 import { getVideo, updateVideo } from "../db/videos";
 import { randomBytes } from "crypto";
+import { getVideoAspectRatio } from "./assets";
 
 export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
   const MAX_UPLOAD_SIZE = 1 << 30;
@@ -49,9 +50,12 @@ export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
   const localFilePath = path.join("./tmp", fileName);
   await Bun.write(localFilePath, file);
 
+  const aspectRatio = await getVideoAspectRatio(localFilePath);
+  const keyWithPrefix = `${aspectRatio}/${fileName}`;
+
   try {
     const bunFile = Bun.file(localFilePath);
-    const bucketFile = cfg.s3Client.file(fileName, {
+    const bucketFile = cfg.s3Client.file(keyWithPrefix, {
       bucket: cfg.s3Bucket,
     });
     await bucketFile.write(bunFile, {
@@ -59,7 +63,7 @@ export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
     });
 
     // Update the VideoURL of the video record in the database with the S3 bucket and key.
-    const s3Url = `https://${cfg.s3Bucket}.s3.${cfg.s3Region}.amazonaws.com/${fileName}`;
+    const s3Url = `https://${cfg.s3Bucket}.s3.${cfg.s3Region}.amazonaws.com/${keyWithPrefix}`;
 
     video.videoURL = s3Url;
     updateVideo(cfg.db, video);

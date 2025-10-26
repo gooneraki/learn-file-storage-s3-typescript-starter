@@ -34,3 +34,69 @@ export function thumbnailLocalPath(fileName: string) {
 export function thumbnailServePath(cfg: ApiConfig, fileName: string) {
   return `http://localhost:${cfg.port}/assets/${fileName}`;
 }
+
+export async function getVideoAspectRatio(filePath: string) {
+  const proc = Bun.spawn(
+    [
+      "ffprobe",
+      "-v",
+      "error",
+      "-select_streams",
+      "v:0",
+      "-show_entries",
+      `stream=width,height`,
+      "-of",
+      "json",
+      filePath,
+    ],
+    {
+      stdout: "pipe",
+      stderr: "pipe",
+      env: process.env,
+    }
+  );
+
+  await proc.exited;
+
+  if (proc.exitCode) {
+    const err = await new Response(proc.stderr).text();
+    console.error("ffprobe error:", err);
+    throw new Error(`ffprobe failed with exit code ${proc.exitCode}`);
+  }
+
+  const output = await new Response(proc.stdout).text();
+
+  const data = JSON.parse(output);
+  const streams = data.streams;
+
+  if (!streams || streams.length === 0) {
+    throw new Error("No video streams found");
+  }
+
+  const { height, width } = streams[0] as {
+    height: number;
+    width: number;
+  };
+
+  console.log("Video dimensions:", width, "x", height);
+
+  if (!width || !height) {
+    throw new Error("Could not determine video dimensions");
+  }
+
+  const aspectRatio = width / height;
+
+  // Common aspect ratios:
+  // 16:9 = 1.778
+  // 9:16 = 0.5625 (portrait)
+  // 4:3 = 1.333
+  // 1:1 = 1.0
+
+  if (aspectRatio > 1.5) {
+    return "landscape";
+  } else if (aspectRatio < 0.75) {
+    return "portrait";
+  } else {
+    return "other";
+  }
+}
