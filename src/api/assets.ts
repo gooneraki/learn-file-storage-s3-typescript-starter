@@ -3,6 +3,7 @@ import { existsSync, mkdirSync } from "fs";
 import { cfg, type ApiConfig } from "../config";
 import path from "path";
 import { BadRequestError } from "./errors";
+import { updateVideo, type Video } from "../db/videos";
 
 export function ensureAssetsDir(cfg: ApiConfig) {
   if (!existsSync(cfg.assetsRoot)) {
@@ -78,8 +79,6 @@ export async function getVideoAspectRatio(filePath: string) {
     width: number;
   };
 
-  console.log("Video dimensions:", width, "x", height);
-
   if (!width || !height) {
     throw new Error("Could not determine video dimensions");
   }
@@ -109,6 +108,8 @@ export async function processVideoForFastStart(inputFilePath: string) {
 
   const proc = Bun.spawn([
     "ffmpeg",
+    "-loglevel",
+    "error",
     "-i",
     inputFilePath,
     "-movflags",
@@ -125,4 +126,29 @@ export async function processVideoForFastStart(inputFilePath: string) {
   await proc.exited;
 
   return newFilePath;
+}
+
+export function generatePresignedURL(
+  cfg: ApiConfig,
+  key: string,
+  expireTime: number = 3600
+) {
+  return cfg.s3Client.presign(key, {
+    bucket: cfg.s3Bucket,
+    expiresIn: expireTime,
+  });
+}
+
+export async function dbVideoToSignedVideo(
+  cfg: ApiConfig,
+  video: Video
+): Promise<Video> {
+  if (!video.videoURL) {
+    return video;
+  }
+  const presignedURL = await generatePresignedURL(cfg, video.videoURL);
+
+  video.videoURL = presignedURL;
+
+  return video;
 }
