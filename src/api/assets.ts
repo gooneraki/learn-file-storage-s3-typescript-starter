@@ -128,27 +128,27 @@ export async function processVideoForFastStart(inputFilePath: string) {
   return newFilePath;
 }
 
-export function generatePresignedURL(
-  cfg: ApiConfig,
-  key: string,
-  expireTime: number = 3600
-) {
-  return cfg.s3Client.presign(key, {
-    bucket: cfg.s3Bucket,
-    expiresIn: expireTime,
-  });
-}
+// export function generatePresignedURL(
+//   cfg: ApiConfig,
+//   key: string,
+//   expireTime: number = 3600
+// ) {
+//   return cfg.s3Client.presign(key, {
+//     bucket: cfg.s3Bucket,
+//     expiresIn: expireTime,
+//   });
+// }
 
-export async function dbVideoToSignedVideo(
-  cfg: ApiConfig,
-  video: Video
-): Promise<Video> {
-  if (!video.videoURL) {
-    return video;
-  }
-  const presignedURL = await generatePresignedURL(cfg, video.videoURL);
+// export async function dbVideoToSignedVideo(
+//   cfg: ApiConfig,
+//   video: Video
+// ): Promise<Video> {
+//   if (!video.videoURL) {
+//     return video;
+//   }
+//   const presignedURL = await generatePresignedURL(cfg, video.videoURL);
 
-  video.videoURL = presignedURL;
+//   video.videoURL = presignedURL;
 
-  return video;
-}
+//   return video;
+// }

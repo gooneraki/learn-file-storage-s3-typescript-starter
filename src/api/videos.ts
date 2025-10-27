@@ -7,11 +7,7 @@ import { BadRequestError, NotFoundError, UserForbiddenError } from "./errors";
 import { getBearerToken, validateJWT } from "../auth";
 import { getVideo, updateVideo } from "../db/videos";
 import { randomBytes } from "crypto";
-import {
-  dbVideoToSignedVideo,
-  getVideoAspectRatio,
-  processVideoForFastStart,
-} from "./assets";
+import { getVideoAspectRatio, processVideoForFastStart } from "./assets";
 
 export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
   const MAX_UPLOAD_SIZE = 1 << 30;
@@ -68,13 +64,13 @@ export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
     });
 
     // Update the VideoURL of the video record in the database with just the key
-    video.videoURL = keyWithPrefix;
+    video.videoURL = `${cfg.s3CfDistribution}/${keyWithPrefix}`;
     updateVideo(cfg.db, video);
 
     // Convert to signed video for response
-    const newVideo = await dbVideoToSignedVideo(cfg, video);
+    // const newVideo = await dbVideoToSignedVideo(cfg, video);
 
-    return respondWithJSON(200, newVideo);
+    return respondWithJSON(200, video);
   } finally {
     // Remember to remove the temp file when the process finishes.
     await Bun.file(localFilePath).delete();
