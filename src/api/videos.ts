@@ -7,7 +7,7 @@ import { BadRequestError, NotFoundError, UserForbiddenError } from "./errors";
 import { getBearerToken, validateJWT } from "../auth";
 import { getVideo, updateVideo } from "../db/videos";
 import { randomBytes } from "crypto";
-import { getVideoAspectRatio } from "./assets";
+import { getVideoAspectRatio, processVideoForFastStart } from "./assets";
 
 export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
   const MAX_UPLOAD_SIZE = 1 << 30;
@@ -51,10 +51,11 @@ export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
   await Bun.write(localFilePath, file);
 
   const aspectRatio = await getVideoAspectRatio(localFilePath);
+  const newFilePath = await processVideoForFastStart(localFilePath);
   const keyWithPrefix = `${aspectRatio}/${fileName}`;
 
   try {
-    const bunFile = Bun.file(localFilePath);
+    const bunFile = Bun.file(newFilePath);
     const bucketFile = cfg.s3Client.file(keyWithPrefix, {
       bucket: cfg.s3Bucket,
     });
@@ -72,5 +73,6 @@ export async function handlerUploadVideo(cfg: ApiConfig, req: BunRequest) {
   } finally {
     // Remember to remove the temp file when the process finishes.
     await Bun.file(localFilePath).delete();
+    await Bun.file(newFilePath).delete();
   }
 }
